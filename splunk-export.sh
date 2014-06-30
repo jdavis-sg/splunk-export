@@ -16,7 +16,7 @@ echo "NOTE: Make sure you limit the search as this will pull all logs and could 
 read QUERY
 clear
 echo "Enter Export Filename:"
-echo "NOTE: This filename will be used to store the exported logs from Splunk. Output will be in csv format."
+echo "NOTE: This filename will be used to store the exported logs from Splunk. Output will be in csv format. This file will be created in /tmp/"
 read FILENAME
 clear
 
@@ -26,7 +26,7 @@ echo "Your Query: $QUERY"
 echo "Performing Splunk Search. Please wait..."
 
 ## Perform the search and export.
-curl  -k -u $USERNAME:$PASSWD --data-urlencode search="$QUERY" -d "output_mode=csv" https://splunk.sendgrid.net:8089/servicesNS/admin/search/search/jobs/export >> $FILENAME
+curl  -k -u $USERNAME:$PASSWD --data-urlencode search="$QUERY" -d "output_mode=csv" https://splunk.sendgrid.net:8089/servicesNS/admin/search/search/jobs/export >> /tmp/$FILENAME
 
 ## If everything finished let the user know and exit clean.
 clear
