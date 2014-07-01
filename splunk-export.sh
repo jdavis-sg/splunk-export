@@ -25,10 +25,11 @@ echo "Your username: $USERNAME"
 echo "Your Query: $QUERY"
 echo "Performing Splunk Search. Please wait..."
 
-## Perform the search and export.
-curl  -k -u $USERNAME:$PASSWD --data-urlencode search="$QUERY" -d "output_mode=csv" https://splunk.sendgrid.net:8089/servicesNS/admin/search/search/jobs/export >> /tmp/$FILENAME
+## Schedule the search and obtain the run ID in order to pull data.
+RUNID=`curl -u $USERNAME:$PASSWD -d search="$QUERY" -k https://splunk.sendgrid.net:8089/servicesNS/admin/search/search/jobs -s | xml_grep 'sid' --text_only`
+
+echo $RUNID
 
 ## If everything finished let the user know and exit clean.
-clear
 echo "Finished!! Please open $FILENAME to view the exported data."
 exit 0
