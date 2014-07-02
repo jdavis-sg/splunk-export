@@ -3,6 +3,7 @@
 # Created By: Jeremy Davis
 # Version: 1.0.0
 OPTION='null'
+DISPATCHSTATE='null'
 
 ## Obtain the first argument to determine what to run.
 case "$1" in
@@ -52,7 +53,7 @@ if [ "$OPTION" = "search" ]
     echo "Scheduling Splunk Search. Please wait..."
 
     ## Schedule the search and obtain the run ID in order to pull data.
-    JOBADDOUT=`curl -u $USERNAME:$PASSWD -d search="$QUERY" -d id="$FILENAME" -k https://splunk.sendgrid.net:8089/services/search/jobs/ -s`
+    JOBADDOUT=`curl -u $USERNAME:$PASSWD -d search="$QUERY" -d id="$FILENAME" -d timeout=14400 -k https://splunk.sendgrid.net:8089/services/search/jobs/ -s`
 
     ## Verify the username and password were correct.
     echo "$JOBADDOUT" | grep -qoi "Unauthorized"
@@ -76,6 +77,7 @@ if [ "$OPTION" = "search" ]
             echo "Please make note of the Job ID in order to pull the results if you loose your connection or the script stops for some reason."
             echo "JOBID: $JOBID"
             echo " "
+            echo "NOTE: The job that was created will be automaticly removed in 4 hours."
         else
             echo "The Job ID wasn't created correctly. Please check everything and try again!"
             echo "Your username: $USERNAME"
@@ -88,13 +90,13 @@ fi
 ## If the option is --export just run the status code.
 if [ "$OPTION" = "export" ]
     then
+    JOBID="$FILENAME"
     ## Wait until the job finishes if there are any issues alert the user.
     while [ "$JOBSTATUS" = "RUNNING" ]
         do
-            JOBSTATUSOUT=`curl -u $USERNAME:$PASSWD -k https://splunk.sendgrid.net:8089/services/search/jobs/$JOBID -si` 
-            DISPATCHSTATE=`echo "$JOBSTATUSOUT" | grep dispatchState | cut -d">" -f2 | cut -d"<" -f1`
+            JOBSTATUSOUT=`curl -u $USERNAME:$PASSWD -k https://splunk.sendgrid.net:8089/services/search/jobs/$JOBID -s` 
             ## Verify the username and password were correct.
-            echo $JOBSTATUSOUT | grep -qoi "Unauthorized"
+            echo "$JOBSTATUSOUT" | grep -qoi "Unauthorized"
             ## Make sure the username and password were correct and the job was actaully created.
             if [ "$?" = "0" ]
                 then
@@ -102,6 +104,8 @@ if [ "$OPTION" = "export" ]
                     echo "Check your username and password and try again"
                     exit 1
             fi
+            ## Pull the dispatchstate to determine if the search is finished.
+            DISPATCHSTATE=`echo "$JOBSTATUSOUT" | grep dispatchState | cut -d">" -f2 | cut -d"<" -f1`
             case "$DISPATCHSTATE" in
                 QUEUED)
                     echo "The job is queued. Please wait..."
@@ -132,7 +136,7 @@ if [ "$OPTION" = "export" ]
                     ;;
                 *)
                     echo "Something has gone wrong!"
-                    echo "$DISPATCHSTATE"
+                    echo "$JOBSTATUSOUT"
                     exit 1
             esac
             clear
@@ -155,6 +159,7 @@ if [ "$OPTION" = "export" ]
                 then
                     echo "Authentication Failed!"
                     echo "Check your username and password and try again"
+                    echo "$DATAEXPORT"
                     exit 1
             fi
             echo "$DATAEXPORT" > /tmp/$FILENAME
@@ -162,4 +167,5 @@ if [ "$OPTION" = "export" ]
 fi
 ## If everything finished let the user know and exit clean.
 echo "Finished!! Please open /tmp/$FILENAME to view the exported data."
+echo "NOTE: The job that was created will be automaticly removed in 4 hours."
 exit 0
